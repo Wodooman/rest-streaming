@@ -14,9 +14,9 @@ Install the dependencies from npm:
 npm install
 ```
 
-Log in to https://developer.nest.com/products
+Log in to the [Nest Developer portal][portal]
 
-Create a client using the following permissions:
+Create an OAuth Client using the following permissions:
 
 - Away read v2
 - Camera read v2
@@ -28,11 +28,11 @@ Create a client using the following permissions:
 
 Set your client redirect URI to be `http://localhost:3000/auth/nest/callback`
 
-Set up your Nest credentials in your environment variables:
+Set your OAuth client ID and client secret as environment variables:
 
 ```sh
-export NEST_ID=XXX
-export NEST_SECRET=XXX
+export NEST_ID='Your OAuth client ID here'
+export NEST_SECRET='Your OAuth client secret here'
 ```
 
 ## Start
@@ -68,6 +68,7 @@ Licensed under the Apache 2.0 license. See [LICENSE][license] for details.
 
 [nest-aware]: https://nest.com/support/article/What-do-I-get-with-Nest-Aware-for-Nest-Cam
 [nest-sim]: https://developer.nest.com/documentation/cloud/home-simulator/
+[portal]: https://console.developers.nest.com
 [bugs]: https://github.com/nestlabs/rest-streaming/issues
 [license]: LICENSE
 [contributing]: CONTRIBUTING.md
