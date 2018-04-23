@@ -58,7 +58,10 @@ passport.deserializeUser(function(user, done) {
  * Start REST Streaming device events given a Nest token.
  */
 function startStreaming(token) {
-  var source = new EventSource(NEST_API_URL + '?auth=' + token);
+  var headers = {
+      'Authorization': "Bearer " + token,
+  }
+  var source = new EventSource(NEST_API_URL, {"headers": headers});
 
   source.addEventListener('put', function(e) {
     console.log('\n' + e.data);

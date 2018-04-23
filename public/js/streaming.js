@@ -36,6 +36,9 @@ if (token) {
  * Create an EventSource object which handles the long-running GET request to
  * the Nest REST Streaming API. The EventSource object emits events as they are
  * published by the API.
+ *
+ * (Note that you can't set the Authorization header in the browser EventSource API,
+ *  so you need to add the auth token to the URL.)
  */
 var source = new EventSource(NEST_API_URL + '?auth=' + token);
 
