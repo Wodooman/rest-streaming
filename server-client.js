@@ -84,28 +84,21 @@ app.get("/auth/nest", passport.authenticate("nest", passportOptions));
  * accessToken and set a cookie so browser can access it, then
  * return the user back to the root app.
  */
-app.get(
-  "/auth/nest/callback",
-  passport.authenticate("nest", passportOptions),
-  function(req, res) {
-    console.log(req.query);
-    axios.default
-      .get(
-        `https://6p34vflxac.execute-api.eu-central-1.amazonaws.com/default/hack-auth-lambda?authCode=${
-          req.query.code
-        }`
-      )
-      .then(response => {
-        console.log(response);
-        res.cookie("nest_token", req.user.accessToken);
-        res.cookie("token", response);
-        res.redirect("/");
-      })
-      .catch(err => {
-        console.log(err);
-      });
-  }
-);
+app.get("/auth/nest/callback", function(req, res) {
+  axios.default
+    .get(
+      `https://6p34vflxac.execute-api.eu-central-1.amazonaws.com/default/hack-auth-lambda?authCode=${
+        req.query.code
+      }`
+    )
+    .then(response => {
+      res.cookie("nest_token", response.data.token);
+      res.redirect("/");
+    })
+    .catch(err => {
+      console.log(err);
+    });
+});
 
 /**
  * When authentication fails, present the user with
