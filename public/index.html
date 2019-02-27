@@ -1,12 +1,18 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>Nest REST Streaming API Sample</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- Material Design -->
-    <link rel="stylesheet" href="https://storage.googleapis.com/code.getmdl.io/1.0.2/material.blue-pink.min.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link
+      rel="stylesheet"
+      href="https://storage.googleapis.com/code.getmdl.io/1.0.2/material.blue-pink.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+    />
     <script src="https://storage.googleapis.com/code.getmdl.io/1.0.2/material.min.js"></script>
     <!-- JQuery -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
@@ -15,94 +21,24 @@
     <!-- Licensed under MIT. Details: https://github.com/borismoore/jsrender -->
     <script src="/jsrender/jsrender.min.js"></script>
     <!-- Custom styles -->
-    <link rel="stylesheet" type="text/css" href="/css/style.css">
-    <link rel="shortcut icon" href="/img/favicon.ico">
+    <link rel="stylesheet" type="text/css" href="/css/style.css" />
+    <link rel="shortcut icon" href="/img/favicon.ico" />
   </head>
   <body>
-
     <!-- Template converter for Fan timeout -->
     <script type="text/javascript">
-      $.views.converters('timeout', function(val) {
+      $.views.converters("timeout", function(val) {
         var options = {
-          weekday: 'long', year: 'numeric', month: 'short',
-          day: 'numeric', hour: '2-digit', minute: '2-digit'
+          weekday: "long",
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
         };
         // Example output: Friday, Feb 1, 2013 6:00 AM
-        return new Date(val).toLocaleDateString('en-US', options);
+        return new Date(val).toLocaleDateString("en-US", options);
       });
-    </script>
-
-    <!-- Template for rendering Nest Thermostat state -->
-    <script id="thermTemplate" type="text/x-jsrender">
-      <div class="mdl-cell mdl-cell--4-col">
-        <div class="mdl-card mdl-shadow--2dp demo-card-square">
-          <div class="mdl-card__title mdl-card--expand">
-            <h2 class="mdl-card__title-text">{{:name_long}}</h2>
-          </div>
-          <div class="mdl-card__supporting-text">
-            <span>
-              <b>Temperature:</b>
-              {{if temperature_scale === 'C'}}
-                {{:target_temperature_c}}&deg;C
-              {{else temperature_scale === 'F'}}
-                {{:target_temperature_f}}&deg;F
-              {{/if}}
-            </span>
-            <span>&bull;</span>
-            <b>Humidity:</b> {{:humidity}}%
-            {{if has_leaf}}
-              <span>
-                &bull;
-              </span>
-              <img src="/img/nest-leaf.png" class="leaf-img">
-            {{/if}}
-            {{if has_fan}}
-              <span>&bull;</span>
-              {{if fan_timer_active}}
-                <b>Fan:</b> On ending on {{timeout:fan_timer_timeout}}
-              {{else}}
-                <b>Fan:</b> Off
-              {{/if}}
-            {{/if}}
-          </div>
-        </div>
-      </div>
-    </script>
-
-    <!-- Template for rendering Nest Protect state -->
-    <script id="smokeTemplate" type="text/x-jsrender">
-      <div class="mdl-cell mdl-cell--4-col">
-        <div class="mdl-card mdl-shadow--2dp demo-card-square">
-          <div class="mdl-card__title mdl-card--expand">
-            <h2 class="mdl-card__title-text">{{:name_long}}</h2>
-          </div>
-          <div class="mdl-card__supporting-text">
-            <span>
-              <b>Battery Health:</b> {{:battery_health}}
-            </span>
-            <span>&bull;</span>
-            <span>
-              <b>Smoke state:</b> {{:smoke_alarm_state}}
-            </span>
-            <br>
-            <span>
-              <b>CO state:</b> {{:co_alarm_state}}
-            </span>
-            <span>&bull;</span>
-            <span class="color-state"><b>Color state:</b>
-              {{if ui_color_state === 'green'}}
-                <img src="/img/green-state.png" />
-              {{else ui_color_state === 'yellow'}}
-                <img src="/img/yellow-state.png" />
-              {{else ui_color_state === 'red'}}
-                <img src="/img/red-state.png" />
-              {{else}}
-                <img src="/img/gray-state.png" />
-              {{/if}}
-            </span>
-          </div>
-        </div>
-      </div>
     </script>
 
     <!-- Template for rendering NestCam state -->
@@ -124,6 +60,18 @@
             <span>
               <b>Audio:</b>{{if is_audio_input_enabled}} Yes {{else}} No {{/if}}
             </span>
+            <span>
+              <b>Had Sound:</b>{{if last_event.has_sound}} Yes {{else}} No {{/if}}
+            </span>
+            <span>
+              <b>Had Motion:</b>{{if last_event.has_motion}} Yes {{else}} No {{/if}}
+            </span>
+            <span>
+              <b>Had Person:</b>{{if last_event.has_person}} Yes {{else}} No {{/if}}
+            </span>
+            <span>
+              <b>Audio:</b>{{if is_audio_input_enabled}} Yes {{else}} No {{/if}}
+            </span>
           </div>
         </div>
       </div>
@@ -137,8 +85,6 @@
           <div class="typo-styles__demo mdl-typography--title home-away">Home/Away: {{:away}}</div>
         </h2>
         <br>
-        {{for thermostats tmpl="#thermTemplate" /}}
-        {{for smokeAlarms tmpl="#smokeTemplate" /}}
         {{for cameras tmpl="#cameraTemplate" /}}
       </div>
     </script>
@@ -151,11 +97,16 @@
           </span>
           <div class="mdl-layout-spacer"></div>
           <nav class="mdl-navigation mdl-layout--large-screen-only">
-            <span class="connection-state">API Connection:
-              <img id="connect-state-img" src="/img/gray-state.png">
+            <span class="connection-state"
+              >API Connection:
+              <img id="connect-state-img" src="/img/gray-state.png" />
             </span>
           </nav>
-          <a href="/auth/nest" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent" id="signin-btn"></a>
+          <a
+            href="/auth/nest"
+            class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent"
+            id="signin-btn"
+          ></a>
         </div>
       </header>
       <main class="mdl-layout__content">

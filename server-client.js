@@ -13,32 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-var http = require('http');
-var https = require('https');
-var path = require('path');
+var http = require("http");
+var https = require("https");
+var path = require("path");
 
-var express = require('express');
-var cookieParser = require('cookie-parser');
-var bodyParser = require('body-parser');
-var passport = require('passport');
-var NestStrategy = require('passport-nest').Strategy;
-var session = require('express-session');
-var openurl = require('openurl');
-
+var express = require("express");
+var cookieParser = require("cookie-parser");
+var bodyParser = require("body-parser");
+var passport = require("passport");
+var NestStrategy = require("passport-nest").Strategy;
+var session = require("express-session");
+var openurl = require("openurl");
+var axios = require("axios");
+require("dotenv").config();
+require("./neststreaming");
 // Change for production apps.
 // This secret is used to sign session ID cookies.
-var SUPER_SECRET_KEY = 'keyboard-cat';
+var SUPER_SECRET_KEY = "keyboard-cat";
 
 // PassportJS options. See http://passportjs.org/docs for more information.
 var passportOptions = {
-  failureRedirect: '/auth/failure', // Redirect to another page on failure.
+  failureRedirect: "/auth/failure" // Redirect to another page on failure.
 };
 
-passport.use(new NestStrategy({
-  // Read credentials from your environment variables.
-  clientID: process.env.NEST_ID,
-  clientSecret: process.env.NEST_SECRET
-}));
+passport.use(
+  new NestStrategy({
+    // Read credentials from your environment variables.
+    clientID: process.env.NEST_ID,
+    clientSecret: process.env.NEST_SECRET
+  })
+);
 
 /**
  * No user data is available in the Nest OAuth
@@ -57,40 +61,59 @@ var app = express();
 app.use(cookieParser(SUPER_SECRET_KEY));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(session({
-  secret: SUPER_SECRET_KEY,
-  resave: false,
-  saveUninitialized: false
-}));
+app.use(
+  session({
+    secret: SUPER_SECRET_KEY,
+    resave: false,
+    saveUninitialized: false
+  })
+);
 app.use(passport.initialize());
 app.use(passport.session());
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(path.join(__dirname, 'third_party')));
+app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "third_party")));
 
 /**
  * Listen for calls and redirect the user to the Nest OAuth
  * URL with the correct parameters.
  */
-app.get('/auth/nest', passport.authenticate('nest', passportOptions));
+app.get("/auth/nest", passport.authenticate("nest", passportOptions));
 
 /**
  * Upon return from the Nest OAuth endpoint, grab the user's
  * accessToken and set a cookie so browser can access it, then
  * return the user back to the root app.
  */
-app.get('/auth/nest/callback', passport.authenticate('nest', passportOptions),
+app.get(
+  "/auth/nest/callback",
+  passport.authenticate("nest", passportOptions),
   function(req, res) {
-    res.cookie('nest_token', req.user.accessToken);
-    res.redirect('/');
-});
+    console.log(req.query);
+    axios.default
+      .get(
+        `https://6p34vflxac.execute-api.eu-central-1.amazonaws.com/default/hack-auth-lambda?authCode=${
+          req.query.code
+        }`
+      )
+      .then(response => {
+        console.log(response);
+        res.cookie("nest_token", req.user.accessToken);
+        res.cookie("token", response);
+        res.redirect("/");
+      })
+      .catch(err => {
+        console.log(err);
+      });
+  }
+);
 
 /**
  * When authentication fails, present the user with
  * an error requesting they try the request again.
  */
-app.get('/auth/failure', function(req, res) {
-  console.log('Authentication failed. Status code: ' + res.statusCode);
-  res.send('Authentication failed. Please try again.');
+app.get("/auth/failure", function(req, res) {
+  console.log("Authentication failed. Status code: " + res.statusCode);
+  res.send("Authentication failed. Please try again.");
 });
 
 /**
@@ -98,27 +121,30 @@ app.get('/auth/failure', function(req, res) {
  * deauthorization API then destroy their local session and cookies.
  * See https://goo.gl/f2kfmv for more information.
  */
-app.get('/auth/logout', function(req, res) {
-  var token = req.cookies['nest_token'];
+app.get("/auth/logout", function(req, res) {
+  var token = req.cookies["nest_token"];
   if (token) {
     var reqOpts = {
-      hostname: 'api.home.nest.com',
-      path: '/oauth2/access_tokens/' + token,
-      method: 'DELETE'
+      hostname: "api.home.nest.com",
+      path: "/oauth2/access_tokens/" + token,
+      method: "DELETE"
     };
 
-    https.request(reqOpts, function(revokeRes) {
-      console.log('Log out successful.');
-      req.session.destroy();
-      res.clearCookie('nest_token');
-      res.redirect('/');
-    }).on('error', function() {
-      console.log('An error occurred attempting to revoke token.');
-      res.send('Log out failed. Please try again.');
-    }).end();
+    https
+      .request(reqOpts, function(revokeRes) {
+        console.log("Log out successful.");
+        req.session.destroy();
+        res.clearCookie("nest_token");
+        res.redirect("/");
+      })
+      .on("error", function() {
+        console.log("An error occurred attempting to revoke token.");
+        res.send("Log out failed. Please try again.");
+      })
+      .end();
   } else {
-    console.log('Not signed in.');
-    res.redirect('/');
+    console.log("Not signed in.");
+    res.redirect("/");
   }
 });
 
@@ -126,16 +152,16 @@ app.get('/auth/logout', function(req, res) {
  * Get port from environment and store in Express.
  */
 var port = process.env.PORT || 3000;
-app.set('port', port);
+app.set("port", port);
 
 /**
  * Create HTTP server.
  */
 var server = http.createServer(app);
 
-server.on('listening', function() {
-  console.log('Listening on port ' + server.address().port);
-  openurl.open('http://localhost:' + port);
+server.on("listening", function() {
+  console.log("Listening on port " + server.address().port);
+  openurl.open("http://localhost:" + port);
 });
 
 /**
