@@ -25,6 +25,7 @@ var EventSource = require("eventsource");
 var openurl = require("openurl");
 require("dotenv").config();
 var cors = require("cors");
+var axios = require("axios");
 
 // Change for production apps.
 // This secret is used to sign session ID cookies.
@@ -117,34 +118,35 @@ app.use(passport.session());
  * Listen for calls and redirect the user to the Nest OAuth
  * URL with the correct parameters.
  */
-app.get("/auth/nest", passport.authenticate("nest", passportOptions));
-app.get("/test", function(req, res) {
-  res.redirect("http://google.com");
+app.get("/auth/nest", passport.authenticate("nest", passportOptions), function(
+  req,
+  res
+) {
+  res.redirect;
 });
+
 /**
  * Upon return from the Nest OAuth endpoint, grab the user's
  * accessToken and start streaming the events.
  */
-app.get(
-  "/auth/nest/callback",
-  passport.authenticate("nest", passportOptions),
-  function(req, res) {
-    axios.default
-      .get(
-        `https://6p34vflxac.execute-api.eu-central-1.amazonaws.com/default/hack-auth-lambda?authCode=${
-          req.query.code
-        }`
-      )
-      .then(response => {
-        res.cookie("nest_token", response.data.token);
-        res.redirect("/");
-        startStreaming(token);
-      })
-      .catch(err => {
-        console.log(err);
-      });
-  }
-);
+app.post("/auth/nest/callback", function(req, res) {
+  console.log(req.body.code);
+  axios.default
+    .post(
+      `https://6p34vflxac.execute-api.eu-central-1.amazonaws.com/default/hack-auth-lambda?authCode=${
+        req.body.code
+      }`
+    )
+    .then(response => {
+      let { token } = response.data;
+      startStreaming(token);
+      return JSON.stringify({ cookie: token });
+    })
+    .catch(err => {
+      console.log(err);
+      res.end();
+    });
+});
 
 /**
  * When authentication fails, present the user with
