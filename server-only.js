@@ -28,6 +28,8 @@ require("dotenv").config();
 var cors = require("cors");
 var axios = require("axios");
 
+const device = require("./device").createDevice();
+
 // Change for production apps.
 // This secret is used to sign session ID cookies.
 var SUPER_SECRET_KEY = "keyboard-cat";
@@ -63,7 +65,7 @@ passport.deserializeUser(function(user, done) {
 /**
  * Start REST Streaming device events given a Nest token.
  */
-function startStreaming(token, socket) {
+function startStreaming(token, socket, device) {
   var headers = {
     Authorization: "Bearer " + token
   };
@@ -74,6 +76,10 @@ function startStreaming(token, socket) {
     // console.log(e.data + "\n");
     if (socket) {
       socket.emit("event", e.data);
+    }
+    if (device) {
+      console.log("sent to AWSAWS");
+      device.publish("Nest-Camera", JSON.stringify(e.data));
     }
   });
 
@@ -203,3 +209,9 @@ io.on("connection", function(socket) {
 });
 
 server.listen(port);
+
+startStreaming(
+  "c.xBfzes6WfcfmuoY1Ahjoy7sOncXhdOzZb4go5kyMsku1XjqMT1BlQU3rxDFmKjB7ni0ZNFTApUINItmQ11wtQ6YQFnJUXfa4YarRphWEjrogr6S1mDKMM8hVL49zqtiXYGKi6W92d5O3JiN0",
+  null,
+  device
+);

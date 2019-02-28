@@ -1,6 +1,6 @@
 exports.config = {
   region: "eu-central-1",
-  clientId: "sdk-nodejs-b4aec3b7-f990-4c27-b161-97be70041bd3",
+  clientId: "sdk-nodejs-1c4d8ae9-589f-4942-93ef-28bd7e68b419",
   caCert: "root-CA.crt",
   clientCert: "Nest-Camera.cert.pem",
   privateKey: "Nest-Camera.private.key",
