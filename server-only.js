@@ -28,7 +28,8 @@ require("dotenv").config();
 var cors = require("cors");
 var axios = require("axios");
 
-const device = require("./device").createDevice();
+const AWS = require("aws-sdk");
+const publishToAws = require("./publishToAws").publishToAws;
 
 // Change for production apps.
 // This secret is used to sign session ID cookies.
@@ -41,6 +42,12 @@ var NEST_API_URL = "https://developer-api.nest.com";
 var passportOptions = {
   failureRedirect: "/auth/failure" // Redirect to another page on failure.
 };
+
+AWS.config.region = "eu-central-1";
+AWS.config.credentials = new AWS.Credentials(
+  process.env.AWS_CLIENT_ID,
+  process.env.AWS_SECRET_CLIENT_KEY
+);
 
 passport.use(
   new NestStrategy({
@@ -65,7 +72,7 @@ passport.deserializeUser(function(user, done) {
 /**
  * Start REST Streaming device events given a Nest token.
  */
-function startStreaming(token, socket, device) {
+function startStreaming(token, socket) {
   var headers = {
     Authorization: "Bearer " + token
   };
@@ -77,10 +84,7 @@ function startStreaming(token, socket, device) {
     if (socket) {
       socket.emit("event", e.data);
     }
-    if (device) {
-      console.log("sent to AWSAWS");
-      device.publish("Nest-Camera", JSON.stringify(e.data));
-    }
+    publishToAws(e.data);
   });
 
   source.addEventListener("open", function(e) {
@@ -150,7 +154,6 @@ app.post("/auth/nest/callback", function(req, res) {
     )
     .then(response => {
       let { token } = response.data;
-      // startStreaming(token);
       res.send({ token });
     })
     .catch(err => {
@@ -211,7 +214,5 @@ io.on("connection", function(socket) {
 server.listen(port);
 
 startStreaming(
-  "c.xBfzes6WfcfmuoY1Ahjoy7sOncXhdOzZb4go5kyMsku1XjqMT1BlQU3rxDFmKjB7ni0ZNFTApUINItmQ11wtQ6YQFnJUXfa4YarRphWEjrogr6S1mDKMM8hVL49zqtiXYGKi6W92d5O3JiN0",
-  null,
-  device
+  "c.xBfzes6WfcfmuoY1Ahjoy7sOncXhdOzZb4go5kyMsku1XjqMT1BlQU3rxDFmKjB7ni0ZNFTApUINItmQ11wtQ6YQFnJUXfa4YarRphWEjrogr6S1mDKMM8hVL49zqtiXYGKi6W92d5O3JiN0"
 );
