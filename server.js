@@ -33,10 +33,6 @@ const startStreaming = require("./lib/startStreaming").startStreaming;
 const saveToRedis = require("./lib/redis").saveToRedis;
 const getAll = require("./lib/redis").getAll;
 
-// Change for production apps.
-// This secret is used to sign session ID cookies.
-var SUPER_SECRET_KEY = "keyboard-cat";
-
 // PassportJS options. See http://passportjs.org/docs for more information.
 var passportOptions = {
   failureRedirect: "/auth/failure" // Redirect to another page on failure.
@@ -70,17 +66,12 @@ passport.deserializeUser(function(user, done) {
 
 var app = express();
 
-app.use(
-  cors({
-    origin: "http://localhost:3000",
-    credentials: true
-  })
-);
+app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(
   session({
-    secret: SUPER_SECRET_KEY,
+    secret: process.env.SESSIOM_SECRET_KEY,
     resave: false,
     saveUninitialized: false
   })
@@ -106,11 +97,7 @@ app.get("/auth/nest", passport.authenticate("nest", passportOptions), function(
 app.post("/auth/nest/callback", function(req, res) {
   console.log(req.body.code);
   axios.default
-    .post(
-      `https://6p34vflxac.execute-api.eu-central-1.amazonaws.com/default/hack-auth-lambda?authCode=${
-        req.body.code
-      }`
-    )
+    .post(`${process.env.LAMBDA_AUTH_URL}?authCode=${req.body.code}`)
     .then(response => {
       let { token } = response.data;
       res.send({ token });
@@ -136,7 +123,6 @@ app.get("/events", async function(req, res) {
 
 app.get("/hello", function(req, res) {
   console.log("world");
-  res.data = "world";
   res.send("world");
 });
 
@@ -159,16 +145,13 @@ const io = ioserver(server);
 console.log("websocket: start");
 io.on("connection", function(socket) {
   console.log("someone connected");
-  startStreaming(
-    "c.xBfzes6WfcfmuoY1Ahjoy7sOncXhdOzZb4go5kyMsku1XjqMT1BlQU3rxDFmKjB7ni0ZNFTApUINItmQ11wtQ6YQFnJUXfa4YarRphWEjrogr6S1mDKMM8hVL49zqtiXYGKi6W92d5O3JiN0",
-    socket
-  );
+  startStreaming(process.env.NEST_ACCESS_TOKEN, socket);
 });
 
 server.listen(port);
 
 // startStreaming(
-//   "c.xBfzes6WfcfmuoY1Ahjoy7sOncXhdOzZb4go5kyMsku1XjqMT1BlQU3rxDFmKjB7ni0ZNFTApUINItmQ11wtQ6YQFnJUXfa4YarRphWEjrogr6S1mDKMM8hVL49zqtiXYGKi6W92d5O3JiN0",
+//   process.env.NEST_ACCESS_TOKEN,
 //   null,
 //   publishToAws,
 //   saveToRedis
