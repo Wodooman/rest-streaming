@@ -17,6 +17,7 @@ var http = require("http");
 var path = require("path");
 
 var express = require("express");
+var ioserver = require("socket.io");
 var bodyParser = require("body-parser");
 var passport = require("passport");
 var NestStrategy = require("passport-nest").Strategy;
@@ -61,14 +62,18 @@ passport.deserializeUser(function(user, done) {
 /**
  * Start REST Streaming device events given a Nest token.
  */
-function startStreaming(token) {
+function startStreaming(token, socket) {
   var headers = {
     Authorization: "Bearer " + token
   };
   var source = new EventSource(NEST_API_URL, { headers: headers });
 
   source.addEventListener("put", function(e) {
-    console.log("\n" + e.data);
+    console.log("Put:");
+    // console.log(e.data + "\n");
+    if (socket) {
+      socket.emit("event", e.data);
+    }
   });
 
   source.addEventListener("open", function(e) {
@@ -154,6 +159,22 @@ app.get("/auth/failure", function(req, res) {
   res.send("Authentication failed. Please try again.");
 });
 
+app.get("/events", function(req, res) {
+  const token = req.params.token;
+  console.log("reading events" + token);
+});
+
+app.get("/hello", function(req, res) {
+  console.log("world");
+  res.data = "world";
+  res.send("world");
+});
+
+app.post("/events", function(req, res) {
+  const token = req.params.token;
+  console.log("recording events started for token: " + token);
+});
+
 /**
  * Get port from environment and store in Express.
  */
@@ -168,4 +189,19 @@ var server = http.createServer(app);
 /**
  * Listen on provided port, on all network interfaces.
  */
+
+const io = ioserver(server);
+console.log("websocket: start");
+io.on("connection", function(socket) {
+  console.log("someone connected");
+  startStreaming(
+    "c.xBfzes6WfcfmuoY1Ahjoy7sOncXhdOzZb4go5kyMsku1XjqMT1BlQU3rxDFmKjB7ni0ZNFTApUINItmQ11wtQ6YQFnJUXfa4YarRphWEjrogr6S1mDKMM8hVL49zqtiXYGKi6W92d5O3JiN0",
+    socket
+  );
+  socket.emit("news", { hello: "world" });
+  socket.on("my other event", function(data) {
+    console.log(data);
+  });
+});
+
 server.listen(port);
