@@ -150,4 +150,4 @@ io.on("connection", function(socket) {
 
 server.listen(port);
 
-startStreaming(process.env.NEST_ACCESS_TOKEN, null, publishToAws, saveToRedis);
+// startStreaming(process.env.NEST_ACCESS_TOKEN, null, publishToAws, saveToRedis);
