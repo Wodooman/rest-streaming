@@ -30,6 +30,8 @@ var axios = require("axios");
 const AWS = require("aws-sdk");
 const publishToAws = require("./lib/publishToAws").publishToAws;
 const startStreaming = require("./lib/startStreaming").startStreaming;
+const saveToRedis = require("./lib/redis").saveToRedis;
+const getAll = require("./lib/redis").getAll;
 
 // Change for production apps.
 // This secret is used to sign session ID cookies.
@@ -127,20 +129,15 @@ app.get("/auth/failure", function(req, res) {
   res.send("Authentication failed. Please try again.");
 });
 
-app.get("/events", function(req, res) {
-  const token = req.params.token;
-  console.log("reading events" + token);
+app.get("/events", async function(req, res) {
+  const events = await getAll();
+  res.send(events);
 });
 
 app.get("/hello", function(req, res) {
   console.log("world");
   res.data = "world";
   res.send("world");
-});
-
-app.post("/events", function(req, res) {
-  const token = req.params.token;
-  console.log("recording events started for token: " + token);
 });
 
 /**
@@ -170,8 +167,9 @@ io.on("connection", function(socket) {
 
 server.listen(port);
 
-startStreaming(
-  "c.xBfzes6WfcfmuoY1Ahjoy7sOncXhdOzZb4go5kyMsku1XjqMT1BlQU3rxDFmKjB7ni0ZNFTApUINItmQ11wtQ6YQFnJUXfa4YarRphWEjrogr6S1mDKMM8hVL49zqtiXYGKi6W92d5O3JiN0",
-  null,
-  publishToAws
-);
+// startStreaming(
+//   "c.xBfzes6WfcfmuoY1Ahjoy7sOncXhdOzZb4go5kyMsku1XjqMT1BlQU3rxDFmKjB7ni0ZNFTApUINItmQ11wtQ6YQFnJUXfa4YarRphWEjrogr6S1mDKMM8hVL49zqtiXYGKi6W92d5O3JiN0",
+//   null,
+//   publishToAws,
+//   saveToRedis
+// );

@@ -16,6 +16,7 @@
     "eventsource": "^0.1.6",
     "express": "^4.13.1",
     "express-session": "^1.11.3",
+    "handy-redis": "^1.5.2",
     "nodemon": "^1.18.10",
     "openurl": "^1.1.0",
     "passport": "^0.2.2",
