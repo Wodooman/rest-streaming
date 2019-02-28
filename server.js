@@ -66,7 +66,12 @@ passport.deserializeUser(function(user, done) {
 
 var app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: "https://nest-camera-frontend.herokuapp.com",
+    credentials: true
+  })
+);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(
