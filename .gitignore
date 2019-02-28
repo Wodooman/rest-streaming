@@ -1,2 +1,4 @@
 node_modules
 .env/
+nest-*
+start.sh

@@ -144,8 +144,8 @@ app.post("/auth/nest/callback", function(req, res) {
     )
     .then(response => {
       let { token } = response.data;
-      startStreaming(token);
-      return JSON.stringify({ cookie: token });
+      // startStreaming(token);
+      res.send({ token });
     })
     .catch(err => {
       console.log(err);
