@@ -13,34 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-var http = require('http');
-var path = require('path');
+var http = require("http");
+var path = require("path");
 
-var express = require('express');
-var bodyParser = require('body-parser');
-var passport = require('passport');
-var NestStrategy = require('passport-nest').Strategy;
-var session = require('express-session');
-var EventSource = require('eventsource');
-var openurl = require('openurl');
+var express = require("express");
+var bodyParser = require("body-parser");
+var passport = require("passport");
+var NestStrategy = require("passport-nest").Strategy;
+var session = require("express-session");
+var EventSource = require("eventsource");
+var openurl = require("openurl");
+require("dotenv").config();
+var cors = require("cors");
 
 // Change for production apps.
 // This secret is used to sign session ID cookies.
-var SUPER_SECRET_KEY = 'keyboard-cat';
+var SUPER_SECRET_KEY = "keyboard-cat";
 
 // This API will emit events from this URL.
-var NEST_API_URL = 'https://developer-api.nest.com';
+var NEST_API_URL = "https://developer-api.nest.com";
 
 // PassportJS options. See http://passportjs.org/docs for more information.
 var passportOptions = {
-  failureRedirect: '/auth/failure', // Redirect to another page on failure.
+  failureRedirect: "/auth/failure" // Redirect to another page on failure.
 };
 
-passport.use(new NestStrategy({
-  // Read credentials from your environment variables.
-  clientID: process.env.NEST_ID,
-  clientSecret: process.env.NEST_SECRET
-}));
+passport.use(
+  new NestStrategy({
+    // Read credentials from your environment variables.
+    clientID: process.env.NEST_ID,
+    clientSecret: process.env.NEST_SECRET
+  })
+);
 
 /**
  * No user data is available in the Nest OAuth
@@ -59,41 +63,53 @@ passport.deserializeUser(function(user, done) {
  */
 function startStreaming(token) {
   var headers = {
-      'Authorization': "Bearer " + token,
-  }
-  var source = new EventSource(NEST_API_URL, {"headers": headers});
+    Authorization: "Bearer " + token
+  };
+  var source = new EventSource(NEST_API_URL, { headers: headers });
 
-  source.addEventListener('put', function(e) {
-    console.log('\n' + e.data);
+  source.addEventListener("put", function(e) {
+    console.log("\n" + e.data);
   });
 
-  source.addEventListener('open', function(e) {
-    console.log('Connection opened!');
+  source.addEventListener("open", function(e) {
+    console.log("Connection opened!");
   });
 
-  source.addEventListener('auth_revoked', function(e) {
-    console.log('Authentication token was revoked.');
+  source.addEventListener("auth_revoked", function(e) {
+    console.log("Authentication token was revoked.");
     // Re-authenticate your user here.
   });
 
-  source.addEventListener('error', function(e) {
-    if (e.readyState == EventSource.CLOSED) {
-      console.error('Connection was closed! ', e);
-    } else {
-      console.error('An unknown error occurred: ', e);
-    }
-  }, false);
+  source.addEventListener(
+    "error",
+    function(e) {
+      if (e.readyState == EventSource.CLOSED) {
+        console.error("Connection was closed! ", e);
+      } else {
+        console.error("An unknown error occurred: ", e);
+      }
+    },
+    false
+  );
 }
 
 var app = express();
 
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true
+  })
+);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(session({
-  secret: SUPER_SECRET_KEY,
-  resave: false,
-  saveUninitialized: false
-}));
+app.use(
+  session({
+    secret: SUPER_SECRET_KEY,
+    resave: false,
+    saveUninitialized: false
+  })
+);
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -101,39 +117,48 @@ app.use(passport.session());
  * Listen for calls and redirect the user to the Nest OAuth
  * URL with the correct parameters.
  */
-app.get('/auth/nest', passport.authenticate('nest', passportOptions));
-
+app.get("/auth/nest", passport.authenticate("nest", passportOptions));
+app.get("/test", function(req, res) {
+  res.redirect("http://google.com");
+});
 /**
  * Upon return from the Nest OAuth endpoint, grab the user's
  * accessToken and start streaming the events.
  */
-app.get('/auth/nest/callback', passport.authenticate('nest', passportOptions),
+app.get(
+  "/auth/nest/callback",
+  passport.authenticate("nest", passportOptions),
   function(req, res) {
-    var token = req.user.accessToken;
-
-    if (token) {
-      console.log('Success! Token acquired: ' + token);
-      res.send('Success! You may now close this browser window.');
-      startStreaming(token);
-    } else {
-      console.log('An error occurred! No token acquired.');
-      res.send('An error occurred. Please try again.');
-    }
-});
+    axios.default
+      .get(
+        `https://6p34vflxac.execute-api.eu-central-1.amazonaws.com/default/hack-auth-lambda?authCode=${
+          req.query.code
+        }`
+      )
+      .then(response => {
+        res.cookie("nest_token", response.data.token);
+        res.redirect("/");
+        startStreaming(token);
+      })
+      .catch(err => {
+        console.log(err);
+      });
+  }
+);
 
 /**
  * When authentication fails, present the user with
  * an error requesting they try the request again.
  */
-app.get('/auth/failure', function(req, res) {
-  res.send('Authentication failed. Please try again.');
+app.get("/auth/failure", function(req, res) {
+  res.send("Authentication failed. Please try again.");
 });
 
 /**
  * Get port from environment and store in Express.
  */
 var port = process.env.PORT || 3000;
-app.set('port', port);
+app.set("port", port);
 
 /**
  * Create HTTP server.
@@ -144,6 +169,3 @@ var server = http.createServer(app);
  * Listen on provided port, on all network interfaces.
  */
 server.listen(port);
-
-openurl.open('http://localhost:' + port + '/auth/nest');
-console.log('Please click Accept in the browser window that just opened.');
