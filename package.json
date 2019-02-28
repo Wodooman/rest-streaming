@@ -1,11 +1,10 @@
 {
-  "name": "nest-samples",
+  "name": "hack-backend-streaming",
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "node server-only.js",
-    "server-client": "node server-client.js",
-    "server-only": "node server-only.js"
+    "start": "node server.js",
+    "start:dev": "nodemon server.js"
   },
   "dependencies": {
     "aws-sdk": "^2.411.0",

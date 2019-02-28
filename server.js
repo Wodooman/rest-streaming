@@ -14,19 +14,23 @@
  * limitations under the License.
  */
 var http = require("http");
-var https = require("https");
 var path = require("path");
 
 var express = require("express");
-var cookieParser = require("cookie-parser");
+var ioserver = require("socket.io");
 var bodyParser = require("body-parser");
 var passport = require("passport");
 var NestStrategy = require("passport-nest").Strategy;
 var session = require("express-session");
 var openurl = require("openurl");
-var axios = require("axios");
 require("dotenv").config();
-require("./neststreaming");
+var cors = require("cors");
+var axios = require("axios");
+
+const AWS = require("aws-sdk");
+const publishToAws = require("./lib/publishToAws").publishToAws;
+const startStreaming = require("./lib/startStreaming").startStreaming;
+
 // Change for production apps.
 // This secret is used to sign session ID cookies.
 var SUPER_SECRET_KEY = "keyboard-cat";
@@ -35,6 +39,12 @@ var SUPER_SECRET_KEY = "keyboard-cat";
 var passportOptions = {
   failureRedirect: "/auth/failure" // Redirect to another page on failure.
 };
+
+AWS.config.region = "eu-central-1";
+AWS.config.credentials = new AWS.Credentials(
+  process.env.AWS_CLIENT_ID,
+  process.env.AWS_SECRET_CLIENT_KEY
+);
 
 passport.use(
   new NestStrategy({
@@ -46,7 +56,7 @@ passport.use(
 
 /**
  * No user data is available in the Nest OAuth
- * service, just return the empty user object.
+ * service, just return the empty user objects.
  */
 passport.serializeUser(function(user, done) {
   done(null, user);
@@ -58,7 +68,12 @@ passport.deserializeUser(function(user, done) {
 
 var app = express();
 
-app.use(cookieParser(SUPER_SECRET_KEY));
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true
+  })
+);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(
@@ -70,33 +85,37 @@ app.use(
 );
 app.use(passport.initialize());
 app.use(passport.session());
-app.use(express.static(path.join(__dirname, "public")));
-app.use(express.static(path.join(__dirname, "third_party")));
 
 /**
  * Listen for calls and redirect the user to the Nest OAuth
  * URL with the correct parameters.
  */
-app.get("/auth/nest", passport.authenticate("nest", passportOptions));
+app.get("/auth/nest", passport.authenticate("nest", passportOptions), function(
+  req,
+  res
+) {
+  res.redirect;
+});
 
 /**
  * Upon return from the Nest OAuth endpoint, grab the user's
- * accessToken and set a cookie so browser can access it, then
- * return the user back to the root app.
+ * accessToken and start streaming the events.
  */
-app.get("/auth/nest/callback", function(req, res) {
+app.post("/auth/nest/callback", function(req, res) {
+  console.log(req.body.code);
   axios.default
-    .get(
+    .post(
       `https://6p34vflxac.execute-api.eu-central-1.amazonaws.com/default/hack-auth-lambda?authCode=${
-        req.query.code
+        req.body.code
       }`
     )
     .then(response => {
-      res.cookie("nest_token", response.data.token);
-      res.redirect("/");
+      let { token } = response.data;
+      res.send({ token });
     })
     .catch(err => {
       console.log(err);
+      res.end();
     });
 });
 
@@ -105,46 +124,29 @@ app.get("/auth/nest/callback", function(req, res) {
  * an error requesting they try the request again.
  */
 app.get("/auth/failure", function(req, res) {
-  console.log("Authentication failed. Status code: " + res.statusCode);
   res.send("Authentication failed. Please try again.");
 });
 
-/**
- * When the user requests to log out, deauthorize their token using the Nest
- * deauthorization API then destroy their local session and cookies.
- * See https://goo.gl/f2kfmv for more information.
- */
-app.get("/auth/logout", function(req, res) {
-  var token = req.cookies["nest_token"];
-  if (token) {
-    var reqOpts = {
-      hostname: "api.home.nest.com",
-      path: "/oauth2/access_tokens/" + token,
-      method: "DELETE"
-    };
+app.get("/events", function(req, res) {
+  const token = req.params.token;
+  console.log("reading events" + token);
+});
 
-    https
-      .request(reqOpts, function(revokeRes) {
-        console.log("Log out successful.");
-        req.session.destroy();
-        res.clearCookie("nest_token");
-        res.redirect("/");
-      })
-      .on("error", function() {
-        console.log("An error occurred attempting to revoke token.");
-        res.send("Log out failed. Please try again.");
-      })
-      .end();
-  } else {
-    console.log("Not signed in.");
-    res.redirect("/");
-  }
+app.get("/hello", function(req, res) {
+  console.log("world");
+  res.data = "world";
+  res.send("world");
+});
+
+app.post("/events", function(req, res) {
+  const token = req.params.token;
+  console.log("recording events started for token: " + token);
 });
 
 /**
  * Get port from environment and store in Express.
  */
-var port = process.env.PORT || 3000;
+var port = process.env.PORT || 4000;
 app.set("port", port);
 
 /**
@@ -152,12 +154,24 @@ app.set("port", port);
  */
 var server = http.createServer(app);
 
-server.on("listening", function() {
-  console.log("Listening on port " + server.address().port);
-  openurl.open("http://localhost:" + port);
-});
-
 /**
  * Listen on provided port, on all network interfaces.
  */
+
+const io = ioserver(server);
+console.log("websocket: start");
+io.on("connection", function(socket) {
+  console.log("someone connected");
+  startStreaming(
+    "c.xBfzes6WfcfmuoY1Ahjoy7sOncXhdOzZb4go5kyMsku1XjqMT1BlQU3rxDFmKjB7ni0ZNFTApUINItmQ11wtQ6YQFnJUXfa4YarRphWEjrogr6S1mDKMM8hVL49zqtiXYGKi6W92d5O3JiN0",
+    socket
+  );
+});
+
 server.listen(port);
+
+startStreaming(
+  "c.xBfzes6WfcfmuoY1Ahjoy7sOncXhdOzZb4go5kyMsku1XjqMT1BlQU3rxDFmKjB7ni0ZNFTApUINItmQ11wtQ6YQFnJUXfa4YarRphWEjrogr6S1mDKMM8hVL49zqtiXYGKi6W92d5O3JiN0",
+  null,
+  publishToAws
+);

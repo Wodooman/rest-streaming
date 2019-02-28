@@ -1,3 +1,7 @@
+# Warning
+
+This is a fork for other repo. It's made during hackathon and may not be fully ready for re-use
+
 # Nest REST Streaming API Sample
 
 Sample app showcasing Nest's REST Streaming API using Node.js
@@ -20,11 +24,11 @@ Create an OAuth Client using the following permissions:
 
 - Away read v2
 - Camera read v2
-- Camera read + images v2*
+- Camera read + images v2\*
 - Smoke+CO alarm read v4
 - Thermostat read v4
 
-**Note: Images are only available with a [Nest Aware][nest-aware] subscription.*
+\*_Note: Images are only available with a [Nest Aware][nest-aware] subscription._
 
 Set your client redirect URI to be `http://localhost:3000/auth/nest/callback`
 
